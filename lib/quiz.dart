@@ -1,4 +1,7 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 
 var finalScore = 0;
@@ -40,8 +43,65 @@ class Quiz extends StatefulWidget{
 }
 
 class QuizState extends State<Quiz> {
+
+
+
+FlutterTts flutterTts;
+dynamic languages;
+dynamic voices;
+String _newVoiceText;
+
+  @override
+  initState() {
+    super.initState();
+    initTts();
+  }
+
+  initTts() {
+    flutterTts = FlutterTts();
+
+    if (Platform.isAndroid) {
+      flutterTts.ttsInitHandler(() {
+        _getLanguages();
+        _getVoices();
+      });
+    } else if (Platform.isIOS) {
+      _getLanguages();
+      _getVoices();
+    }
+
+  }
+
+  Future _getLanguages() async {
+    languages = await flutterTts.getLanguages;
+    if (languages != null) setState(() => languages);
+  }
+
+  Future _getVoices() async {
+    voices = await flutterTts.getVoices;
+    if (voices != null) setState(() => voices);
+  }
+  Future _speak() async {
+    if (_newVoiceText != null) {
+      if (_newVoiceText.isNotEmpty) {
+        flutterTts.speak(_newVoiceText);
+
+      }
+      else
+        {
+          _ackAlert(context);
+        }
+    }
+  }
+
+
+
+
   @override
   Widget build(BuildContext context) {
+
+    _newVoiceText = quiz.questions[questionNumber];
+
     return new WillPopScope(
         onWillPop: () async => false,
         child: Scaffold(
@@ -86,6 +146,9 @@ class QuizState extends State<Quiz> {
                   style: new TextStyle(
                     fontSize: 20.0,
                   ),),
+
+
+                 btnSection(),
 
                 new Padding(padding: EdgeInsets.all(10.0)),
 
@@ -188,22 +251,22 @@ class QuizState extends State<Quiz> {
                   ],
                 ),
 
-                new Padding(padding: EdgeInsets.all(15.0)),
+//                new Padding(padding: EdgeInsets.all(15.0)),
 
-                new Container(
-                    alignment: Alignment.bottomCenter,
-                    child:  new MaterialButton(
-                        minWidth: 240.0,
-                        height: 30.0,
-                        color: Colors.red,
-                        onPressed: resetQuiz,
-                        child: new Text("Quit",
-                          style: new TextStyle(
-                              fontSize: 18.0,
-                              color: Colors.white
-                          ),)
-                    )
-                ),
+//                new Container(
+//                    alignment: Alignment.bottomCenter,
+//                    child:  new MaterialButton(
+//                        minWidth: 240.0,
+//                        height: 30.0,
+//                        color: Colors.red,
+//                        onPressed: resetQuiz,
+//                        child: new Text("Quit",
+//                          style: new TextStyle(
+//                              fontSize: 18.0,
+//                              color: Colors.white
+//                          ),)
+//                    )
+//                ),
 
 
 
@@ -214,7 +277,20 @@ class QuizState extends State<Quiz> {
 
         )
     );
+
+    
   }
+
+  Widget btnSection() => Container(
+      padding: EdgeInsets.only(top: 10.0),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        _buildButtonColumn(
+            Colors.green, Colors.greenAccent, Icons.play_arrow, 'PLAY', _speak),
+      ]));
+
+
+
+
 
   void resetQuiz(){
     setState(() {
@@ -235,6 +311,27 @@ class QuizState extends State<Quiz> {
         questionNumber++;
       }
     });
+  }
+
+  Column _buildButtonColumn(Color color, Color splashColor, IconData icon,
+      String label, Function func) {
+    return Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+              icon: Icon(icon),
+              color: color,
+              splashColor: splashColor,
+              onPressed: () => func()),
+          Container(
+              margin: const EdgeInsets.only(top: 8.0),
+              child: Text(label,
+                  style: TextStyle(
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.w400,
+                      color: color)))
+        ]);
   }
 }
 
@@ -267,6 +364,7 @@ class Summary extends StatelessWidget{
                   questionNumber = 0;
                   finalScore = 0;
                   Navigator.pop(context);
+
                 },
                 child: new Text("Reset Quiz",
                   style: new TextStyle(
@@ -284,4 +382,24 @@ class Summary extends StatelessWidget{
   }
 
 
+}
+
+Future<void> _ackAlert(BuildContext context) {
+  return showDialog<void>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Not in stock'),
+        content: const Text('This item is no longer available'),
+        actions: <Widget>[
+          FlatButton(
+            child: Text('Ok'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
 }
